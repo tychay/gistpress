@@ -1,25 +1,25 @@
 <?php
 /**
- * GistPress
+ * GistPress3
  *
  * @package   GistPress
  * @author    Brady Vercher <brady@blazersix.com>
  * @author    Gary Jones <gary@garyjones.co.uk>
- * @copyright Copyright (c) 2013, Blazer Six, Inc.
+ * @author    Terry Chay <tychay@php.net>
+ * @copyright Copyright (c) 2013, Blazer Six, Inc.; (c) 2015 Terry Chay
  * @license   GPL-2.0+
  *
  * @wordpress-plugin
- * Plugin Name:       GistPress
- * Plugin URI:        https://github.com/bradyvercher/gistpress
- * Description:       Gist oEmbed and shortcode support with caching.
- * Version:           2.0.3
- * Author:            Blazer Six
- * Author URI:        http://www.blazersix.com/
- * License:           GPL-2.0+
+ * Plugin Name:       GistPress3
+ * Plugin URI:        https://github.com/tychay/gistpress
+ * Description:       Bidirectional Gist oEmbed + shortcode support with caching.
+ * Version:           3.0
+ * Author:            tychay
+ * License:           GPLv2 or later
  * License URI:       http://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       gistpress
  * Domain Path:       /languages
- * GitHub Plugin URI: https://github.com/bradyvercher/gistpress
+ * GitHub Plugin URI: https://github.com/tychay/gistpress
  * GitHub Branch:     master
  */
 
