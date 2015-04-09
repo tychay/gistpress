@@ -24,14 +24,16 @@ GitHub provides a method for embedding Gists on websites, but it requires insert
 
 In addition GistPress3 adds the following:
 
-* Support for shortcodes in the style of JetPack/WordPress.com
-* Support for url="" instead of id=""
-* Non-parsed gist content is simply treated as a comment (it is removed on output).
+* Backwardly compatible with JetPack/WordPress.com shortcodes
+* Correctly disabled JetPack handling by default
+* Support for url="" instead of id="" in shortcodes
+* Non-parsed gist shortcodes are simply passed through (adds a comment)
 
 TODO:
 
 * Admin panel for preferences
 * Support for "gistpress" shortcode
+* Revision support
 
 == Installation ==
 

@@ -63,7 +63,7 @@ function gistpress_init() {
 	$gistpress->set_logger( $gistpress_logger );
 	$gistpress->run();
 }
-add_action( 'init', 'gistpress_init' );
+add_action( 'init', 'gistpress_init', 0 ); // run with a lower priority to "beat" certain functionality
 
 /**
  * Add instance of our debug bar panel to Debug Bar plugin if not in the admin.

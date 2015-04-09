@@ -80,11 +80,55 @@ class GistPress {
 	 * @since 1.1.0
 	 */
 	public function run() {
-		wp_embed_register_handler( 'gist', self::OEMBED_REGEX, array( $this, 'wp_embed_handler' ) );
-		add_shortcode( 'gist', array( $this, 'shortcode' ) );
+		add_action( 'init', array($this, 'register_handlers'), 15); //TODO make position configurable
+		// TODO: make option
+		// Let's be sure to get JetPack specifically
+		add_filter( 'jetpack_shortcodes_to_include', array( $this, 'filter_remove_from_jetpack' ) );
 
 		add_action( 'init', array( $this, 'style' ), 15 );
 		add_action( 'post_updated', array( $this, 'delete_gist_transients' ), 10, 3 );
+	}
+
+	/**
+	 * Register the oEmbed and shortcode handler.
+	 *
+	 * This is in a separate method in order to be enqueed later by default.
+	 * In this way, it will manipulate itself to override any existing gist
+	 * handler. If it is set later, the existing gist handler will override
+	 * this one. If it is set earlier, then it will be overridden.
+	 */
+	public function register_handlers() {
+		// Unregister handlers before registering (in case if run last / default)
+		wp_embed_unregister_handler( 'gist' ); //the assumption is the priority is default (e.g. Jetpack)
+		///TODO: make option
+		wp_embed_unregister_handler( 'oe-gist' ); //oembed-gist
+
+		wp_embed_register_handler( 'gistpress', self::OEMBED_REGEX, array( $this, 'wp_embed_handler' ) );
+
+		// the way add_shortcode() works, the last shortcode is the one that 
+		// runs due to overwriting others
+		add_shortcode( 'gist', array( $this, 'shortcode' ) );
+	}
+
+	/**
+	 * Unregister gist from Jetpack
+	 *
+	 * {@see http://jetpack.me/tag/shortcodes/} (though it is not quite correct
+	 * in the unlikely event that the first shortcode is gist)
+	 * 
+	 * @param  array $shortcodes the current list of php files to include
+	 */
+	public function filter_remove_from_jetpack( $shortcodes ) {
+		$jetpack_shortcodes_dir = WP_CONTENT_DIR . '/plugins/jetpack/modules/shortcodes/';
+
+
+		$includes = array();
+		$key = array_search( $jetpack_shortcodes_dir . 'gist.php', $shortcodes);
+		if ( $key !== false ) {
+			unset($shortcodes[$key]);
+		}
+
+		return $shortcodes;
 	}
 
 	/**
