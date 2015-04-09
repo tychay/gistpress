@@ -1,11 +1,11 @@
 === GistPress3 ===
 
-Contributors: tychay, [Brady Vercher](https://github.com/bradyvercher), [Gary Jones](https://github.com/GaryJones)
+Contributors: tychay, [Brady Vercher](https://github.com/bradyvercher), [Gary Jones](https://github.com/GaryJones)  
 Requires at least: 3.5.0  
-Tested up to: 4.1.1
-Stable tag: trunk:
-License: [GPL-2.0+](http://www.gnu.org/licenses/gpl-2.0.html)
-tags: gist, oembed, gistpress
+Tested up to: 4.1.1  
+Stable tag: trunk  
+License: [GPL-2.0+](http://www.gnu.org/licenses/gpl-2.0.html)  
+tags: gist, oembed, gistpress  
 
 Extend Wordpress to create a bidirectional embed Gists via oEmbed or shortcode.
 

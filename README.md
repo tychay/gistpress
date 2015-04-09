@@ -1,15 +1,19 @@
-# GistPress #
+# GistPress3 #
 
-A WordPress plugin to easily embed Gists via oEmbed or shortcode.
+**Contributors:** tychay, [Brady Vercher](https://github.com/bradyvercher), [Gary Jones](https://github.com/GaryJones)  
+**Requires at least:** 3.5.0  
+**Tested up to:** 4.1.1  
+**Stable tag:** trunk  
+**License:** [GPL-2.0+](http://www.gnu.org/licenses/gpl-2.0.html)  
+tags: gist, oembed, gistpress  
 
-__Contributors:__ [Brady Vercher](https://github.com/bradyvercher), [Gary Jones](https://github.com/GaryJones)  
-__Requires:__ 3.5.0  
-__Tested up to:__ 3.9.0  
-__License:__ [GPL-2.0+](http://www.gnu.org/licenses/gpl-2.0.html)
+Extend Wordpress to create a bidirectional embed Gists via oEmbed or shortcode.
+
+## Description ##
 
 GitHub provides a method for embedding Gists on websites, but it requires inserting a `<script>` tag, which can become mangled or stripped from the TinyMCE editor used in WordPress. Instead, this plugin allows you to embed a Gist by simply inserting its URL into the editor for oEmbed-like support, or via a shortcode for more refined control.
 
-## Features ##
+###Features###
 
 * Better integration with the visual editor in WordPress since `<script>` tags aren't used, which also allows visitors without JavaScript to view your code snippets.
 * Users viewing your content in a feed reader will see a link directly to the Gist instead of nothing.
@@ -18,25 +22,42 @@ GitHub provides a method for embedding Gists on websites, but it requires insert
 * Easily debug embedded Gists using a custom panel for the [Debug Bar](http://wordpress.org/extend/plugins/debug-bar/) plugin.
 * A few additional CSS classes are inserted for better styling hooks.
 
-![Embedded Gist Screenshot](screenshot-1.png)  
-_Example Gist embed with line number restrictions, a highlighted line, and meta links disabled._
+In addition GistPress3 adds the following:
 
-### Caching ###
+* Backwardly compatible with JetPack/WordPress.com shortcodes
+* Correctly disabled JetPack handling by default
+* Support for url###"" instead of id###"" in shortcodes
+* Non-parsed gist shortcodes are simply passed through (adds a comment)
 
-Embedded Gists are cached using a custom algorithm that minimizes HTTP requests and ensures your code snippets continue to display even if GitHub is down. If you need to update the snippet with changes made on GitHub, just update the post and the cache will be refreshed.
+TODO:
 
-If you decide you don't want to use the plugin, simply uninstall using the "Delete" link on the Plugins screen, and all cached data and options will be cleaned up. Like it never even existed.
+* Admin panel for preferences
+* Support for "gistpress" shortcode
+* Revision support
 
 ## Installation ##
 
-### Upload ###
+### Warning ###
 
-1. Download the [latest release](https://github.com/bradyvercher/gistpress/archive/master.zip) from GitHub.
+You can not have GistPress and GistPress3 installed and active at the same
+time as the function and class names overlap.
+
+### Installing the Plugin ###
+
+Automatic:
+1. Choose `Plugins > Add New…`
+2. Search for "GistPress"
+3. Click on "GistPress3"
+4. Click "Install Now"
+
+Upload:
+
+1. Download the [latest release](https://github.com/tychay/gistpress/archive/master.zip) from GitHub.
 2. Go to the __Plugins &rarr; Add New__ screen in your WordPress admin panel and click the __Upload__ tab at the top.
 3. Upload the zipped archive.
 4. Click the __Activate Plugin__ link after installation completes.
 
-### Manual ###
+Manual:
 
 1. Download the [latest release](https://github.com/bradyvercher/gistpress/archive/master.zip) from GitHub.
 2. Unzip the archive.
@@ -45,24 +66,24 @@ If you decide you don't want to use the plugin, simply uninstall using the "Dele
 
 Read the Codex for more information about [installing plugins manually](http://codex.wordpress.org/Managing_Plugins#Manual_Plugin_Installation).
 
-### Git ###
+Git:
 
-Clone this repository in `/wp-content/plugins/`:
+1. Navigate to `/wp-content/plugins/`
+2. Clone repository: `git clone git@github.com:tychay/gistpress.git`
+3. Go to the __Plugins__ screen in your WordPress admin panel and click the __Activate__ link under GistPress.
 
-`git clone git@github.com:bradyvercher/gistpress.git`
+### Updating ###
 
-Then go to the __Plugins__ screen in your WordPress admin panel and click the __Activate__ link under GistPress.
-
-## Updating ##
+Automatically installed plugins can be updated via the "Automatic" method above.
 
 Although it's not a regular occurrence, GitHub may introduce new features or changes that break the way this plugin works. In such cases, it's important to receive notifications and be able to easily update with the latest fixes. Fortunately, there are a couple of options you can install to manage updates from GitHub-hosted plugins:
 
 * [Git Plugin Updates](https://github.com/brainstormmedia/git-plugin-updates)
 * [GitHub Updater](https://github.com/afragen/github-updater)
 
-## Usage ##
+###Using the plugin###
 
-### oEmbed ###
+####oEmbed####
 
 Insert the URL to a Gist on its own line like this (don't link it up):
 
@@ -72,7 +93,7 @@ That's it!
 
 _Notice that URL is for a secret Gist? Of course URLs for public Gists work, too._
 
-### Shortcode ###
+####Shortcode####
 
 Using the same URL from above, the shortcode equivalent would look like this:
 
@@ -80,15 +101,15 @@ Using the same URL from above, the shortcode equivalent would look like this:
 
 In both cases, that will embed all four files in the example Gist, however, with the shortcode, you have the option to limit the display to a single file by specifiying its name:
 
-`[gist id="9b1307f153f4abe352a4" file="media-control-snippet.php"]`
+`[gist id###"9b1307f153f4abe352a4" file###"media-control-snippet.php"]`
 
 Taking it further, you can limit display to specific lines within a file:
 
-`[gist id="9b1307f153f4abe352a4" file="media-control-snippet.php" lines="2-5"]`
+`[gist id###"9b1307f153f4abe352a4" file###"media-control-snippet.php" lines="2-5"]`
 
 Or even highlight lines:
 
-`[gist id="9b1307f153f4abe352a4" file="media-control-snippet.php" highlight="7"]`
+`[gist id###"9b1307f153f4abe352a4" file###"media-control-snippet.php" highlight="7"]`
 
 <table><caption><h3>Shortcode Attributes</strong></h3>
   <thead>
@@ -142,6 +163,11 @@ Or even highlight lines:
   </tbody>
 </table>
 
+## Screenshots ##
+
+![](screenshot-1.png)
+Example Gist embed with line number restrictions, a highlighted line, and meta links disabled.
+
 ## Notes ##
 
 Some themes may include styles that interfere with the default rules for embedded Gists. You can override the conflicting styles in your theme's (or [child theme's](http://codex.wordpress.org/Child_Themes)) style sheet with more specific rules targetting the embed HTML. Typically, this might include removing margins on `<pre>` elements, changing padding on the table cells, and ensuring the `line-height` and `font-size` properties for line numbers and code match so they align properly.
@@ -162,10 +188,15 @@ And the following would go in the theme's functions.php to disable the `style` a
 add_filter( 'gistpress_highlight_color', '__return_false' );
 ```
 
-## Changelog
 
-See [CHANGELOG](CHANGELOG.md).
+### Caching ###
 
-## Credits ##
+Embedded Gists are cached using a custom algorithm that minimizes HTTP requests and ensures your code snippets continue to display even if GitHub is down. If you need to update the snippet with changes made on GitHub, just update the post and the cache will be refreshed.
 
-Built by [Brady Vercher](https://twitter.com/bradyvercher) & [Gary Jones](https://twitter.com/GaryJ)
+If you decide you don't want to use the plugin, simply uninstall using the "Delete" link on the Plugins screen, and all cached data and options will be cleaned up. Like it never even existed.
+
+## Changelog ##
+
+**Version 2.03**
+
+* Forked from  2.03 built by [Brady Vercher](https://twitter.com/bradyvercher) & [Gary Jones](https://twitter.com/GaryJ). See [Changelog](https://github.com/tychay/gistpress/blob/develop/CHANGELOG.md)
