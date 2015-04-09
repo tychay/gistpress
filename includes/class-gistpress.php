@@ -21,6 +21,8 @@
 class GistPress {
 	/** @var object Logger object. */
 	protected $logger = null;
+	/** @const  OEMBED_REGEX regular extpression to extract from URL */
+	const OEMBED_REGEX = '#https://gist\.github\.com/(?:.*/)?([a-z0-9]+)(?:\#file([_-])(.*))?#i';
 
 	/**
 	 * Toggle to short-circuit shortcode output and delete its corresponding
@@ -78,8 +80,7 @@ class GistPress {
 	 * @since 1.1.0
 	 */
 	public function run() {
-		$oembed_pattern = '#https://gist\.github\.com/(?:.*/)?([a-z0-9]+)(?:\#file([_-])(.*))?#i';
-		wp_embed_register_handler( 'gist', $oembed_pattern, array( $this, 'wp_embed_handler' ) );
+		wp_embed_register_handler( 'gist', self::OEMBED_REGEX, array( $this, 'wp_embed_handler' ) );
 		add_shortcode( 'gist', array( $this, 'shortcode' ) );
 
 		add_action( 'init', array( $this, 'style' ), 15 );
@@ -115,25 +116,22 @@ class GistPress {
 	 * @return string Shortcode
 	 */
 	public function wp_embed_handler( array $matches, array $attr, $url, array $rawattr ) {
-		$shortcode = '[gist';
 
-		if ( isset( $matches[1] ) && ! empty( $matches[1] ) ) {
-			$shortcode .= ' id="' . esc_attr( $matches[1] ) . '"';
-		}
+		// refactoring the url matching
+		$raw_attr = $this->_extract_url_matches( $matches );
 
-		// Make specific to a single file.
-		if ( isset( $matches[3] ) && ! empty( $matches[3] ) ) {
-			$real_file_name = $this->get_file_name( $matches[3], $matches[2], $matches[1] );
-			if ( $real_file_name ) {
-				$shortcode .= ' file="' . esc_attr( $real_file_name ) . '"';
-			}
-		}
+		// Previously used reserved attribute "oembed" to identify that it
+		// is an oembed URL, this is no longer needed because call directly.
+		//$raw_attr['oembed'] = 1;
+		unset($raw_attr['url']);
+		if ( empty($raw_attr['file']) ) { unset($raw_attr['file']); }
 
-		// This attribute added so we can identify if a oembed URL or direct shortcode was used.
-		$shortcode .= ' oembed="1"]';
-
-		return $shortcode;
+		// Injecting a shortcode for later handling is bad mojo for if we want
+		// to support dual self closing and content based shortcodes (only one
+		// or other per document). Therefore we should process it directly.
+		return $this->shortcode($raw_attr, '', $matches[0]);
 	}
+
 
 	/**
 	 * Gist shortcode.
@@ -166,13 +164,24 @@ class GistPress {
 	 * @uses GistPress::debug_log() Potentially log a debug message.
 	 * @uses GistPress::debug_log() Gist retrieval failure string.
 	 *
-	 * @param array $rawattr Raw attributes of the shortcode.
+	 * @param mixed  $rawattr Raw attributes of the shortcode (usually array)
+	 * @param string $content enclosing
+	 * @param string $oembed_content should be url if coming from oembed, if
+	 *               shortcode, then it is empty
 	 *
 	 * @return string HTML content to display the Gist.
 	 */
-	public function shortcode( array $rawattr ) {
-		$shortcode = $this->rebuild_shortcode( $rawattr );
+	public function shortcode( $rawattr , $content='', $oembed_content='') {
+		// used for rendering in error reporting
+		$shortcode = $this->rebuild_shortcode( $rawattr, $content );
 
+		// handle jetpack style embed content
+		if ( $this->_attrs_in_content( $rawattr, $content ) ) {
+			// clear content string if we've extracted stuff in it
+			$content = '';
+		}
+
+		if ( empty($rawattr) ) { $rawattr = array(); } //prevent fatals
 		$attr = $this->standardize_attributes( $rawattr );
 
 		$shortcode_hash = $this->shortcode_hash( 'gist', $attr );
@@ -186,7 +195,11 @@ class GistPress {
 		}
 
 		// Log what we're dealing with - title uses original attributes, but hashed against processed attributes.
-		$this->debug_log( '<h2>' . $shortcode . '</h2>', $shortcode_hash );
+		if ( !empty($oembed_content) ) {
+			$this->debug_log( '<h2>'. $oembed_content . ' &rarr; ' . $shortcode . '</h2>', $shortcode_hash );
+		} else {
+			$this->debug_log( '<h2>' . $shortcode . '</h2>', $shortcode_hash );
+		}
 
 		// Bail if the ID is not set.
 		if ( empty( $attr['id'] ) ) {
@@ -610,20 +623,37 @@ class GistPress {
 	/**
 	 * Rebuild the original shortcode as a string with raw attributes.
 	 *
+	 * Now handles cases where $rawattr is missing first attribute name
+	 * (jetpack style), and where there is a content
+	 * 
 	 * @since 1.1.1
 	 *
-	 * @param array $rawattr Raw attributes => values.
+	 * @param mixed  $rawattr usually an array… Raw attributes => values.
+	 * @param string $content the stuff in the middle
 	 *
 	 * @return string Gist shortcode.
 	 */
-	protected function rebuild_shortcode( array $rawattr ) {
-		$attrs = array();
-		foreach ( $rawattr as $key => $value ) {
-			if ( 'oembed' != $key ) {
-				$attrs[] = $key . '="' . $value . '"';
+	protected function rebuild_shortcode( $rawattr, $content ) {
+		if ( is_array($rawattr) ) {
+			$attrs = array();
+			foreach ( $rawattr as $key => $value ) {
+				// handle non-attribute codes
+				if ( is_int($key) ) {
+					$attrs[] = $value;
+				} else {
+					$attrs[] = $key . '="' . $value . '"';
+				}
 			}
+			$return = '[gist '. implode( ' ', $attrs );
+		} else {
+			$return = '[gist';
 		}
-		return '[gist ' . implode( ' ', $attrs ) . ']';
+		if ($content) {
+			$return .= ']' . esc_html($content) . '[/gist]';
+		} else {
+			$return .= ']';
+		}
+		return $return;
 	}
 
 	/**
@@ -636,6 +666,11 @@ class GistPress {
 	 * @return array Standardized and sanitized shortcode attributes.
 	 */
 	protected function standardize_attributes( array $rawattr ) {
+		// Translate Jetpack style shortcodes into attributes
+		if ( !empty($rawattr[0]) ) {
+			$rawattr = array_merge( $this->_extract_url_string($rawattr[0]), $rawattr );
+			unset($rawattr[0]); // not really needed, but let's be safe
+		}
 		/**
 		 * Filter the shortcode attributes defaults.
 		 * 
@@ -693,7 +728,6 @@ class GistPress {
 				'lines_start'       => '',
 				'show_line_numbers' => true,
 				'show_meta'         => true,
-				'oembed'            => 0, // Private use only
 			)
 		);
 
@@ -841,7 +875,71 @@ class GistPress {
 	protected function unknown() {
 		return '{{unknown}}';
 	}
+	//
+	// PRIVATE UTILITY FUNCTIONS
+	//
+	/**
+	 * Extracts content from the regex matches of a gist oembed URL.
+	 * 
+	 * @param  array $matches preg_match output
+	 * @return array has of data extracted. They are: url, id, file
+	 */
+	private function _extract_url_matches( $matches ) {
+		return array(
+			'url'  => $matches[0],
+			'id'   => ( isset( $matches[1] ) && ! empty( $matches[1] ) )
+			          ? $matches[1]
+			          : '',
+			'file' => ( isset( $matches[3] ) && ! empty( $matches[3] ) )
+			          ? $this->get_file_name( $matches[3], $matches[2], $matches[1] )
+			          : '',
+		);
+	}
 
+	/**
+	 * Extracts the content from a url
+	 * 
+	 * @param  string $url the string to match to a URL
+	 * @return array  either empty array or data extracted: url, id, file
+	 */
+	private function _extract_url_string( $url ) {
+		if ( preg_match( self::OEMBED_REGEX, $url, $matches ) ) {
+			return $this->_extract_url_matches( $matches );
+		}
+		return array();
+	}
+	/**
+	 * Extracts Jetpack style content into $attrs
+	 *
+	 * Note that there are two styles: URL or a bare ID. Unlike Jetpack, this
+	 * also understands modern-style URLs, but it does not support files in the
+	 * case of bare IDs.
+	 * 
+	 * @param  array $attrs the current state of attributes
+	 * @param  string $content the content to search for URL or ID
+	 * @return boolean true if match happenned
+	 */
+	private function _attrs_in_content( &$attrs, $content ) {
+		//see if content is a URL
+		if ( preg_match( self::OEMBED_REGEX, $content, $matches ) ) {
+			$attrs = array_merge( $attrs, $this->_extract_url_matches( $matches ) );
+			return true;
+		}
+
+		// see if content is an ID
+		// Note that Jetpack is wrong because is_numeric returns false on hexadecimal
+		// numbers
+		if ( preg_match( '!(^[a-z0-9]+)$!', $content, $matches ) ) {
+			$attrs['id'] = $matches[1];
+			return true;
+		}
+
+		return false;
+	}
+
+	//
+	// PUBLIC UTILITY FUNCTIONS
+	// 
 	/**
 	 * Escape a regular expression replacement string.
 	 *
@@ -854,4 +952,5 @@ class GistPress {
 	public function preg_replace_quote( $str ) {
 		return preg_replace( '/(\$|\\\\)(?=\d)/', '\\\\$1', $str );
 	}
+
 }

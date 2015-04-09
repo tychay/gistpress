@@ -22,6 +22,16 @@ GitHub provides a method for embedding Gists on websites, but it requires insert
 * Easily debug embedded Gists using a custom panel for the [Debug Bar](http://wordpress.org/extend/plugins/debug-bar/) plugin.
 * A few additional CSS classes are inserted for better styling hooks.
 
+In addition GistPress3 adds the following:
+
+* Support for shortcodes in the style of JetPack/WordPress.com
+
+TODO:
+
+* Support for url="" instead of id=""
+* Support for "gistpress" shortcode
+* Admin panel for preferences
+
 == Installation ==
 
 ### Warning ###
