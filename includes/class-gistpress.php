@@ -70,12 +70,17 @@ class GistPress {
 	 * handler is registered to mimic oEmbed functionality, but it relies on
 	 * the shortcode for processing.
 	 *
+	 * In the original code, this runs on init, but it should run on
+	 * plugins_loaded which occurs before init. In addition, this needs to
+	 * beat other shortcode plugins to work.
+	 * 
 	 * Supported formats:
 	 *
 	 * * Old link: https://gist.github.com/{{id}}#file_{{filename}}
 	 * * Old link with username: https://gist.github.com/{{user}}/{{id}}#file_{{filename}}
 	 * * New bookmark: https://gist.github.com/{{id}}#file-{{file_slug}}
 	 * * New bookmark with username: https://gist.github.com/{{user}}/{{id}}#file-{{sanitized-filename}}
+	 * * new bookmark with username + revisionid: https://gist.github.com/{{user}}/{{id}}//{{revisiontag}}#file-{{sanitized-filename}}
 	 *
 	 * @since 1.1.0
 	 */
@@ -100,7 +105,8 @@ class GistPress {
 	public function register_handlers() {
 		// Unregister handlers before registering (in case if run last / default)
 		wp_embed_unregister_handler( 'gist' ); //the assumption is the priority is default (e.g. Jetpack)
-		///TODO: make option
+		///TODO: make option to disable these unregisters
+		wp_embed_unregister_handler( 'github-gist' ); // jetpack's oembed (backup)
 		wp_embed_unregister_handler( 'oe-gist' ); //oembed-gist
 
 		wp_embed_register_handler( 'gistpress', self::OEMBED_REGEX, array( $this, 'wp_embed_handler' ) );
@@ -121,8 +127,6 @@ class GistPress {
 	public function filter_remove_from_jetpack( $shortcodes ) {
 		$jetpack_shortcodes_dir = WP_CONTENT_DIR . '/plugins/jetpack/modules/shortcodes/';
 
-
-		$includes = array();
 		$key = array_search( $jetpack_shortcodes_dir . 'gist.php', $shortcodes);
 		if ( $key !== false ) {
 			unset($shortcodes[$key]);

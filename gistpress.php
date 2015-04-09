@@ -63,7 +63,10 @@ function gistpress_init() {
 	$gistpress->set_logger( $gistpress_logger );
 	$gistpress->run();
 }
-add_action( 'init', 'gistpress_init', 0 ); // run with a lower priority to "beat" certain functionality
+// Jetpack and some plugins load during "plugins_loaded" which occurs before
+// "init" (obviously), so we have to beat that.
+//add_action( 'init', 'gistpress_init' );
+add_action( 'plugins_loaded', 'gistpress_init', 5 );
 
 /**
  * Add instance of our debug bar panel to Debug Bar plugin if not in the admin.
