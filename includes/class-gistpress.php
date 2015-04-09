@@ -22,7 +22,8 @@ class GistPress {
 	/** @var object Logger object. */
 	protected $logger = null;
 	/** @const  OEMBED_REGEX regular extpression to extract from URL */
-	const OEMBED_REGEX = '#https://gist\.github\.com/(?:.*/)?([0-9a-f]+)(?:\#file([_-])(.*))?#i';
+	// Username may only contain alphanumeric characters or single hyphens, and cannot begin or end with a hyphen
+	const OEMBED_REGEX = '#https://gist\.github\.com/(?:[0-9a-z\-]*/)?([0-9a-f]+)(?:/([0-9a-f]{40}))?(?:\#file([_-])(.*))?#i';
 
 	/**
 	 * Toggle to short-circuit shortcode output and delete its corresponding
@@ -262,11 +263,8 @@ class GistPress {
 			return '<!-- GistPress: Missing ID attribute -->' . $shortcode . '<!-- /GistPress -->';
 		}
 
-		$url = 'https://gist.github.com/' . $attr['id'];
-		$json_url = $url . '.json';
-
 		if ( is_feed() ) {
-			$html = sprintf( '<a href="%s" target="_blank"><em>%s</em></a>', esc_url( $url ), __( 'View this code snippet on GitHub.', 'gistpress' ) );
+			$html = sprintf( '<a href="%s" target="_blank"><em>%s</em></a>', esc_url( $this->_url_from_attrs( $attr ) ), __( 'View this code snippet on GitHub.', 'gistpress' ) );
 			
 			/**
 			 * Filter what is shown in feeds.
@@ -278,6 +276,7 @@ class GistPress {
 			return apply_filters( 'gistpress_feed_html', $html );
 		}
 
+		$json_url = $this->_url_from_attrs( $attr, 'json' );
 		$html = $this->get_gist_html( $json_url, $attr );
 
 		if ( $this->unknown() === $html ) {
@@ -300,7 +299,7 @@ class GistPress {
 			 * @param array  $attr Shortcode attributes, standardized.
 			 * @param int    $id   Post ID.
 			 */
-			$html = apply_filters( 'gistpress_html', $html, $url, $attr, get_the_ID() );
+			$html = apply_filters( 'gistpress_html', $html, $this->_url_from_attrs( $attr, 'root' ), $attr, get_the_ID() );
 
 			foreach ( $attr as $key => $value ) {
 				$message  = '<strong>' . $key . __(' (shortcode attribute)', 'gistpress') . ':</strong> ';
@@ -314,6 +313,7 @@ class GistPress {
 
 		return '';
 	}
+
 
 	/**
 	 * Helper method to determine if a shortcode attribute is true or false.
@@ -415,16 +415,13 @@ class GistPress {
 	 *
 	 * @since 1.1.0
 	 *
-	 * @param string $url   The JSON endpoint for the Gist.
+	 * @param string $url   The JSON endpoint for the Gist( + filename)
 	 * @param array  $args  List of shortcode attributes.
 	 *
 	 * @return string Gist HTML or {{unknown}} if it couldn't be determined.
 	 */
 	public function get_gist_html( $url, array $args ) {
-		// Add a specific file from a Gist to the URL.
-		if ( ! empty( $args['file'] ) ) {
-			$url = add_query_arg( 'file', urlencode( $args['file'] ), $url );
-		}
+		// Add a specific file from a Gist to the URL. (already added to $url)
 
 		$shortcode_hash = $this->shortcode_hash( 'gist', $args );
 		$raw_key = '_gist_raw_' . md5( $url );
@@ -751,6 +748,8 @@ class GistPress {
 		 * 	@type bool   $show_line_numbers Show line numbers or not, default is true, to show line numbers.
 		 * 	@type bool   $show_meta         Show meta information or not, default is true, to show
 		 *                                      meta information.
+		 * 	@type string $url               Allow URL style shortcode embedding
+		 * 	@type string $revision          Link a specific revision in a gist
 		 * }
 		 */
 		$defaults = apply_filters(
@@ -784,6 +783,7 @@ class GistPress {
 				'show_line_numbers' => true,
 				'show_meta'         => true,
 				'url'               => '',
+				'revision'          => '',
 			)
 		);
 
@@ -857,6 +857,22 @@ class GistPress {
 		}
 
 		return '';
+	}
+
+	/**
+	 * Sanitize filename in the style of github
+	 *
+	 * Note that this isn't perfect if it is an old style but the . is injected
+	 * this might not link properly, not a big deal given where this will be.
+	 * used (only in hashlinks). Plus, I don't think GitHub uses the old
+	 * hashlinks anymore.
+	 * {@see https://gist.github.com/anonymous/13338#file-getjoy}.
+	 * 
+	 * @param string $filename the filename to hashlink
+	 * @return string the hashlink id 
+	 */
+	protected function set_file_name( $filename ) {
+		return 'file-'.str_replace( '.', '-', $filename);
 	}
 
 	/**
@@ -947,9 +963,13 @@ class GistPress {
 			          ? $matches[1]
 			          : '',
 		);
-		if ( isset( $matches[3] ) && ! empty( $matches[3] ) ) {
-			$return['file'] =  $this->get_file_name( $matches[3], $matches[2], $matches[1] );
+		if ( isset( $matches[4] ) && ! empty( $matches[4] ) ) {
+			$return['file'] =  $this->get_file_name( $matches[4], $matches[3], $matches[1] );
 		}
+		if ( isset( $matches[2] ) && ! empty( $matches[2] ) ) {
+			$return['revision'] =  $matches[2];
+		}
+		
 		return $return;
 	}
 
@@ -992,6 +1012,39 @@ class GistPress {
 		}
 
 		return false;
+	}
+	/**
+	 * Generate a gist URL from the attributes array
+	 * @param  array $attrs The shortcode attributes. Relevant params are id,
+	 *                      file, revision (username will be mapped on
+	 *                      server-side)
+	 * @param  string $type The type of URL to return. Values are 'full', 'root'
+	 *                      'latest', json', and 'js'
+	 * @return string       The URL
+	 */
+	private function _url_from_attrs( $attrs, $type='full' ) {
+		$url = 'https://gist.github.com/' . $attrs['id'];
+		if ( $type == 'latest' ) { return $url; }
+		if ( !empty($attrs['revision']) ) {
+			$url .= '/' . $attrs['revision'];
+		}
+		if ( $type == 'root' ) { return $url; }
+		if ( $type == 'json' ) {
+			$url .= '.json';
+		} elseif ( $type == 'js' ) {
+			$url .= '.js';
+		}
+		if ( $type == 'full' ) {
+			if ( empty($attrs['file']) ) {
+				return $url;
+			}
+			return $url . '#' . $this->set_file_name( $attrs['file'] );
+		}
+		if ( !empty($attrs['file']) ) {
+			//wordpress built-in add_query_arg() is expensive
+			$url .= '?file='. urlencode( $attrs['file'] );
+		}
+		return $url;
 	}
 
 	//

@@ -24,27 +24,32 @@ GitHub provides a method for embedding Gists on websites, but it requires insert
 
 In addition GistPress3 adds the following:
 
-* Backwardly compatible with JetPack/WordPress.com shortcodes
-* Correctly disabled JetPack handling by default
-* Support for url###"" instead of id###"" in shortcodes
+* Backwardly compatible with JetPack/WordPress.com-style shortcodes 
+  * bare url in attributes
+  * id in content
+  * url in content
+* Allows arbitrary content to be put in shortcode (and removed in output)
+* Disable JetPack and oEmbed Gist plugin handling by default
+* Support for `url###""` substitute for `id###""` in shortcodes (oEmbed Gist-style)
 * Non-parsed gist shortcodes are simply passed through (adds a comment)
+* Supports revision sha1 linking, alsoo through `revision=""` in shortcode
 
 TODO:
 
 * Admin panel for preferences
-* Support for "gistpress" shortcode
-* Revision support
+* Support for "gistpress" shortcode via API upload
 
 ## Installation ##
 
 ### Warning ###
 
-You can not have GistPress and GistPress3 installed and active at the same
+You cannot have GistPress and GistPress3 installed and active at the same
 time as the function and class names overlap.
 
 ### Installing the Plugin ###
 
 Automatic:
+
 1. Choose `Plugins > Add New…`
 2. Search for "GistPress"
 3. Click on "GistPress3"
@@ -115,20 +120,30 @@ Or even highlight lines:
   <thead>
     <tr>
       <th>Attribute</th>
-    <th>Description</th>
+      <th>Description</th>
       <th>Example</th>
     </tr>
   </thead>
   <tbody>
-    <tr>
+   <tr>
       <td><strong><code>id</code></strong></td>
       <td>A Gist ID. Required. Secret Gist IDs work, too.</td>
-	  <td><em><code>4204333</code></td>
+      <td><em><code>4204333</code></em></td>
+    </tr>
+    <tr>
+      <td><strong><code>url</code></strong></td>
+      <td>Can be used in place of id, file, and revision. Required if id is misssing.</td>
+      <td><em><code>https://gist.github.com/padolsey/527683</code></em></td>
     </tr>
     <tr>
       <td><strong><code>file</code></strong></td>
       <td>A filename in a Gist. Required when using the following attributes with a multi-file Gist.</td>
       <td><em><code>filename.php</code></em></td>
+    </tr>
+    <tr>
+      <td><strong><code>revision</code></strong></td>
+      <td>Allows linking of specific revision instead of latest</td>
+      <td><em><code>eea6004e74dfd42a63cc3b46e1412a3c8d5bb680</code></em></td>
     </tr>
 	<tr>
 		<td><strong><code>highlight</code></strong></td>
@@ -158,7 +173,7 @@ Or even highlight lines:
 	<tr>
       <td><strong><code>show_meta</code></strong></td>
       <td>Whether the meta links following a Gist should be displayed. Defaults to true.</td>
-	  <td><em><code>0</code> to disable.</em></td>
+      <td><em><code>0</code> to disable.</em></td>
     </tr>
   </tbody>
 </table>
@@ -196,6 +211,15 @@ Embedded Gists are cached using a custom algorithm that minimizes HTTP requests 
 If you decide you don't want to use the plugin, simply uninstall using the "Delete" link on the Plugins screen, and all cached data and options will be cleaned up. Like it never even existed.
 
 ## Changelog ##
+
+**Version 3.0**
+
+* First release of GitPress3 (bi-directional support)
+* oEmbed supports revision sha1's
+* shortcode attribute supports: bare url (Jetpack-style), `url` (oEmbed Gist-style), `revision`
+* shortcode content supports: bare url, id (Jetpack-style), arbitrary stuff to ignore (Gunam-style)
+* Playing with other pluygins: disables JetPack, oEmbed Gist, non-parsing shortcodes pass through
+* Numerous small bugfixes, refactors and other improvements
 
 **Version 2.03**
 
