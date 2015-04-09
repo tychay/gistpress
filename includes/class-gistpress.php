@@ -22,7 +22,7 @@ class GistPress {
 	/** @var object Logger object. */
 	protected $logger = null;
 	/** @const  OEMBED_REGEX regular extpression to extract from URL */
-	const OEMBED_REGEX = '#https://gist\.github\.com/(?:.*/)?([a-z0-9]+)(?:\#file([_-])(.*))?#i';
+	const OEMBED_REGEX = '#https://gist\.github\.com/(?:.*/)?([0-9a-f]+)(?:\#file([_-])(.*))?#i';
 
 	/**
 	 * Toggle to short-circuit shortcode output and delete its corresponding
@@ -169,7 +169,9 @@ class GistPress {
 	 * @param string $oembed_content should be url if coming from oembed, if
 	 *               shortcode, then it is empty
 	 *
-	 * @return string HTML content to display the Gist.
+	 * @return string HTML content to display the Gist. If gist is invalid
+	 *   return a compatible version of shortcode with the error condition
+	 *   in the comment field.
 	 */
 	public function shortcode( $rawattr , $content='', $oembed_content='') {
 		// used for rendering in error reporting
@@ -201,10 +203,15 @@ class GistPress {
 			$this->debug_log( '<h2>' . $shortcode . '</h2>', $shortcode_hash );
 		}
 
+		// see if ID is in url parameter before bailing
+		if ( empty( $attr['id'] ) && !empty( $attr['url'] ) ) {
+			$this->_attrs_in_content( $attr, $attr['url'] );
+			unset($attr['url']);
+		}
 		// Bail if the ID is not set.
 		if ( empty( $attr['id'] ) ) {
 			$this->debug_log( __( 'Shortcode did not have a required id attribute.', 'gistpress' ), $shortcode_hash );
-			return '';
+			return '<!-- GistPress: Missing ID attribute -->' . $shortcode . '<!-- /GistPress -->';
 		}
 
 		$url = 'https://gist.github.com/' . $attr['id'];
@@ -728,6 +735,7 @@ class GistPress {
 				'lines_start'       => '',
 				'show_line_numbers' => true,
 				'show_meta'         => true,
+				'url'               => '',
 			)
 		);
 
@@ -882,18 +890,19 @@ class GistPress {
 	 * Extracts content from the regex matches of a gist oembed URL.
 	 * 
 	 * @param  array $matches preg_match output
-	 * @return array has of data extracted. They are: url, id, file
+	 * @return array has of data extracted. They are: url, id, (file)
 	 */
 	private function _extract_url_matches( $matches ) {
-		return array(
+		$return = array(
 			'url'  => $matches[0],
 			'id'   => ( isset( $matches[1] ) && ! empty( $matches[1] ) )
 			          ? $matches[1]
 			          : '',
-			'file' => ( isset( $matches[3] ) && ! empty( $matches[3] ) )
-			          ? $this->get_file_name( $matches[3], $matches[2], $matches[1] )
-			          : '',
 		);
+		if ( isset( $matches[3] ) && ! empty( $matches[3] ) ) {
+			$return['file'] =  $this->get_file_name( $matches[3], $matches[2], $matches[1] );
+		}
+		return $return;
 	}
 
 	/**
@@ -929,7 +938,7 @@ class GistPress {
 		// see if content is an ID
 		// Note that Jetpack is wrong because is_numeric returns false on hexadecimal
 		// numbers
-		if ( preg_match( '!(^[a-z0-9]+)$!', $content, $matches ) ) {
+		if ( preg_match( '!(^[0-9a-f]+)$!', $content, $matches ) ) {
 			$attrs['id'] = $matches[1];
 			return true;
 		}
