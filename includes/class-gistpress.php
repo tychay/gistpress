@@ -5,10 +5,11 @@
  * @package   GistPress
  * @author    Brady Vercher <brady@blazersix.com>
  * @author    Gary Jones <gary@garyjones.co.uk>
- * @copyright Copyright (c) 2012, Blazer Six, Inc.
+ * @author    terry chay <tychay@php.net>
+ * @copyright Copyright (c) 2012, Blazer Six, Inc. (c) 2015, terry chay
  * @license   GPL-2.0+
  *
- * @todo Cache the style sheet locally. #22
+ * @todo Cache the style sheet locally. #22 <https://github.com/bradyvercher/gistpress/issues/22>
  */
 
 /**
@@ -115,6 +116,9 @@ class GistPress {
 		// the way add_shortcode() works, the last shortcode is the one that 
 		// runs due to overwriting others
 		add_shortcode( 'gist', array( $this, 'shortcode' ) );
+		// secret shortcode to allow embeds to bypass wpautop without breaking
+		// public gist shortcode handling
+		add_shortcode( 'gist_embed', array( $this, 'shortcode_embed' ) );
 	}
 
 	/**
@@ -148,10 +152,16 @@ class GistPress {
 	/**
 	 * WP embed handler to generate a shortcode string from a Gist URL.
 	 *
-	 * Parses Gist URLs for oEmbed support. Returns the value as a shortcode
-	 * string to let the shortcode method handle processing. The value
-	 * returned also doesn't have wpautop() applied, which is a must for
-	 * source code.
+	 * Instead of returning the value as a regular gist shortcode string,
+	 * this returns the value as a secret shortcode string. The reason for
+	 * that is because setting a shortcode string "fixes" self-closing vs.
+	 * content-based shortcode handling in the document.
+	 * 
+	 * However, processing shortcodes directly at this point (like in most
+	 * plugins) opens it up to being wpautopeed on later.
+	 *
+	 * No need to parse the Gist URL anymore like in GistPress 2.0 because 3.0
+	 * supports url extraction in content and attributes.
 	 *
 	 * @since 1.0.0
 	 *
@@ -162,23 +172,24 @@ class GistPress {
 	 * @param string $url     The URL attempting to be embedded.
 	 * @param array  $rawattr Associative array of raw shortcode attributes.
 	 *
-	 * @return string Shortcode
+	 * @return string private shortcode
 	 */
 	public function wp_embed_handler( array $matches, array $attr, $url, array $rawattr ) {
+		return '[gist_embed]'.$url.'[/gist_embed]';
 
 		// refactoring the url matching
 		$raw_attr = $this->_extract_url_matches( $matches );
+	}
 
-		// Previously used reserved attribute "oembed" to identify that it
-		// is an oembed URL, this is no longer needed because call directly.
-		//$raw_attr['oembed'] = 1;
-		unset($raw_attr['url']);
-		if ( empty($raw_attr['file']) ) { unset($raw_attr['file']); }
-
-		// Injecting a shortcode for later handling is bad mojo for if we want
-		// to support dual self closing and content based shortcodes (only one
-		// or other per document). Therefore we should process it directly.
-		return $this->shortcode($raw_attr, '', $matches[0]);
+	/**
+	 * Shortcode hook for secret embed handling (format is secured)
+	 * @param  boolean $attr    false
+	 * @param  string  $content the URL of embed
+	 * @return string           the output of the regular shortcode function but
+	 *                          with debugging that knows its an embed.
+	 */
+	public function shortcode_embed( $attr, $content ) {
+		return $this->shortcode( $attr, $content, $content);
 	}
 
 
@@ -280,7 +291,7 @@ class GistPress {
 		$html = $this->get_gist_html( $json_url, $attr );
 
 		if ( $this->unknown() === $html ) {
-			return make_clickable( $url );
+			return make_clickable( $this->_url_from_attrs( $attr ) );
 		}
 
 		// If there was a result, return it.
@@ -997,6 +1008,8 @@ class GistPress {
 	 * @return boolean true if match happenned
 	 */
 	private function _attrs_in_content( &$attrs, $content ) {
+		// sometimes $attr can be the wrong type
+		if ( empty($attrs) ) { $attrs = array(); }
 		//see if content is a URL
 		if ( preg_match( self::OEMBED_REGEX, $content, $matches ) ) {
 			$attrs = array_merge( $attrs, $this->_extract_url_matches( $matches ) );
