@@ -33,10 +33,10 @@ In addition GistPress3 adds the following:
 * Support for `url=""` substitute for `id=""` in shortcodes (oEmbed Gist-style)
 * Non-parsed gist shortcodes are simply passed through (adds a comment)
 * Supports revision sha1 linking, alsoo through `revision=""` in shortcode
+* Settings page (with help tab) in Admin for configuring defaults.
 
 TODO:
 
-* Admin panel for preferences
 * Support for "gistpress" shortcode via API upload
 
 == Installation ==
@@ -215,9 +215,10 @@ If you decide you don't want to use the plugin, simply uninstall using the "Dele
 
 * First release of GitPress3 (bi-directional support)
 * oEmbed supports revision sha1's
-* shortcode attribute supports: bare url (Jetpack-style), `url` (oEmbed Gist-style), `revision`
-* shortcode content supports: bare url, id (Jetpack-style), arbitrary stuff to ignore (Gunam-style)
-* Playing with other pluygins: disables JetPack, oEmbed Gist, non-parsing shortcodes pass through
+* Shortcode attributes supports: bare url (Jetpack-style), `url` (oEmbed Gist-style), and `revision`
+* Shortcode content supports: bare url & id (Jetpack-style), arbitrary stuff to ignore (Gangnam-style)
+* Plays nice/mean with similar plugins: disables JetPack, oEmbed Gist
+* New Settings page (with help) added: set defaults.
 * Numerous small bugfixes, refactors and other improvements
 
 **Version 2.03**

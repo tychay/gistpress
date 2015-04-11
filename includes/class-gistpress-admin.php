@@ -3,7 +3,7 @@
  * GistPress Admin
  *
  * @package   GistPress
- * @subpackage  GistPress Admin
+ * @subpackage  Admin
  * @author    terry chay <tychay@php.net>
  * @copyright Copyright (c) 2015, terry chay
  * @license   GPL-2.0+
@@ -58,6 +58,11 @@ class GistPress_Admin {
 	 * @var GistPress
 	 */
 	private $_gistpress = null;
+	/**
+	 * Path to the templates for this plugin
+	 * @var string
+	 */
+	private $_template_dir = '';
 	/** @var string suffix returned from add_admin_page for options/settings */
 	private $_settings_suffix = '';
 	//
@@ -68,7 +73,8 @@ class GistPress_Admin {
 	 * @param gistpress $gistpress The gistpress obejt
 	 */
 	public function __construct( $gistpress ) {
-		$this->_gistpress = $gistpress;
+		$this->_gistpress    = $gistpress;
+		$this->_template_dir = dirname(dirname(__FILE__)).'/templates';
 	}
 
 	/**
@@ -88,7 +94,7 @@ class GistPress_Admin {
 	}
 	
 	/**
-	 * Add settings menu to wp_admin.
+	 * Add settings menu to wp_admin (and it's action)
 	 * 
 	 * @return void
 	 */
@@ -107,6 +113,9 @@ class GistPress_Admin {
 
 	/**
 	 * Trigger on loading the settings page specifically (before output).
+	 *
+	 * - Process settings form
+	 * - Add help tab and sidebar
 	 * 
 	 * @return void
 	 */
@@ -129,7 +138,16 @@ class GistPress_Admin {
 					break;
 			}
 		}
-
+		$screen = get_current_screen();
+		$screen->remove_help_tabs();
+		$screen->add_help_tab( array(
+			'id'      => self::SLUG.'-options',
+			'title'    => __( 'GistPress Defaults', self::SLUG ),
+			'content'  => '',
+			'callback' => array( $this, 'show_settings_help_defaults' ),
+		));
+		$screen->set_help_sidebar( $this->_get_settings_help_sidebar() );
+		return;
 	}
 	/**
 	 * Render the settings page
@@ -140,6 +158,24 @@ class GistPress_Admin {
 		// set some variables
 		$settings = $this->_gistpress->settings;
 		//  include the template
-		include dirname(dirname(__FILE__)).'/templates/page.settings.php';
+		include $this->_template_dir.'/page.settings.php';
+	}
+	/**
+	 * Render the first help panel
+	 *
+	 * @return  void 
+	 */
+	public function show_settings_help_defaults()
+	{
+		include $this->_template_dir.'/help.settings-defaults.php';
+	}
+	/**
+	 * Return contents of the help sidebar for the Settings page
+	 */
+	private function _get_settings_help_sidebar()
+	{
+		ob_start();
+		include $this->_template_dir.'/help.settings-sidebar.php';
+		return ob_get_clean();
 	}
 }
