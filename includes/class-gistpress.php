@@ -20,20 +20,26 @@
  * @author Gary Jones <gary@garyjones.co.uk>
  */
 class GistPress {
+	/**
+	 * regular extpression to extract from Gist URL.
+	 * 
+	 * - Username may only contain alphanumeric characters or single hyphens,
+	 *   and cannot begin or end with a hyphen
+	 * - revision code is a sha1 full hash: (40 hex numbers) 
+	 * 
+	 * @const OEMBED_REGEX
+	 */
+	const OEMBED_REGEX = '#https://gist\.github\.com/(?:[0-9a-z\-]*/)?([0-9a-f]+)(?:/([0-9a-f]{40}))?(?:\#file([_-])(.*))?#i';
+	/**
+	 * The blog_option name to store settings in
+	 */
+	const SETTINGS_NAME = 'GistPress3_settings';
+
+	//
+	// PROPERTIES
+	// 
 	/** @var object Logger object. */
 	protected $logger = null;
-	/** @const  OEMBED_REGEX regular extpression to extract from URL */
-	// Username may only contain alphanumeric characters or single hyphens, and cannot begin or end with a hyphen
-	const OEMBED_REGEX = '#https://gist\.github\.com/(?:[0-9a-z\-]*/)?([0-9a-f]+)(?:/([0-9a-f]{40}))?(?:\#file([_-])(.*))?#i';
-
-	/**
-	 * Toggle to short-circuit shortcode output and delete its corresponding
-	 * transient so output can be regenerated the next time it is run.
-	 *
-	 * @var bool
-	 */
-	protected $delete_shortcode_transients = false;
-
 	/**
 	 * Sets a logger instance on the object.
 	 *
@@ -51,7 +57,6 @@ class GistPress {
 	public function set_logger( $logger ) {
 		$this->logger = $logger;
 	}
-
 	/**
 	 * Return logger instance.
 	 *
@@ -64,6 +69,90 @@ class GistPress {
 	public function get_logger() {
 		return $this->$logger;
 	}
+
+	/**
+	 * Toggle to short-circuit shortcode output and delete its corresponding
+	 * transient so output can be regenerated the next time it is run.
+	 *
+	 * @var bool
+	 */
+	protected $delete_shortcode_transients = false;
+	//
+	// OVERLOAD PROPERTIES
+	//
+	/**
+	 * Accessor for properties
+	 * 
+	 * @param  string $name property to get
+	 * @return mixed        the property
+	 */
+	public function __get( $name ) {
+		switch ( $name ) {
+			case 'settings':
+				if ( empty( $this->_settings) ) {
+					$this->_load_settings();
+				}
+				return $this->_settings;
+			default:
+				trigger_error( sprintf( 'Property %s does not exist.', $name ) );
+				return null;
+		}
+	}
+	public function __set($name, $value) {
+		switch ( $name ) {
+			case 'settings':
+				trigger_error( sprintf( 'Set plugin settings through update_settings()' ) );
+				break;
+			default:
+				trigger_error( sprintf( 'Property %s does not exist.', $name ) );
+				return null;
+		}
+	}
+	/**
+	 * @var  array Plugin option
+	 */
+	private $_settings = array();
+	/**
+	 * A really manual get_option for an array but cache it in the private variable
+	 * 
+	 * @return void
+	 */
+	private function _load_settings()
+	{
+		$settings_changed = false;
+		$settings = get_option( self::SETTINGS_NAME, array() );
+		$default_settings = array(
+			'embed_stylesheet'  => true,
+			'highlight_color'   => '#ffc',
+			'show_line_numbers'	=> true,
+			'show_meta'         => true,
+		);
+		// upgrade missing parameters
+		foreach ( $default_settings as $option=>$value ) {
+			if ( !array_key_exists( $option, $settings ) ) {
+				$settings[$option] = $value;
+			}
+			$settings_changed = true;
+		}
+		$this->_settings = $settings;
+		if ( $settings_changed ) {
+			$this->update_settings();
+		}
+	}
+	/**
+	 * Chagne any settings and save to blog options
+	 *
+	 * @param  array $settings options to modify and save. Default saves the
+	 *                         current options.
+	 * @return void
+	 */
+	public function update_settings( array $settings=array() ) {
+		foreach ( $settings as $key=>$value ) {
+			$this->_settings[$key] = $value;
+		}
+		update_option( self::SETTINGS_NAME, $this->_settings );
+	}
+
 
 	/**
 	 * Set up the plugin.
@@ -759,10 +848,11 @@ class GistPress {
 		 * 	@type bool   $show_line_numbers Show line numbers or not, default is true, to show line numbers.
 		 * 	@type bool   $show_meta         Show meta information or not, default is true, to show
 		 *                                      meta information.
-		 * 	@type string $url               Allow URL style shortcode embedding
+		 * 	@type string $url               URL style shortcode embedding (can substitutte for id, revision, file)
 		 * 	@type string $revision          Link a specific revision in a gist
 		 * }
 		 */
+		$settings = $this->settings;
 		$defaults = apply_filters(
 			'gistpress_shortcode_defaults',
 			array(
@@ -775,7 +865,7 @@ class GistPress {
 				 * @param bool $gistpress_stylesheet_default Include default style sheet or not.
 				 *                                           Default is true, to include it.
 				 */
-				'embed_stylesheet'  => apply_filters( 'gistpress_stylesheet_default', true ),
+				'embed_stylesheet'  => apply_filters( 'gistpress_stylesheet_default', $settings['embed_stylesheet'] ),
 				'file'              => '',
 				'highlight'         => array(),
 
@@ -787,12 +877,12 @@ class GistPress {
 				 * @param string $gistpress_highlight_color Hex color code for highlighting lines.
 				 *                                          Default is `#ffc`.
 				 */
-				'highlight_color'   => apply_filters( 'gistpress_highlight_color', '#ffc' ),
+				'highlight_color'   => apply_filters( 'gistpress_highlight_color', $settings['highlight_color'] ),
 				'id'                => '',
 				'lines'             => '',
 				'lines_start'       => '',
-				'show_line_numbers' => true,
-				'show_meta'         => true,
+				'show_line_numbers' => $settings['show_line_numbers'],
+				'show_meta'         => $settings['show_meta'],
 				'url'               => '',
 				'revision'          => '',
 			)

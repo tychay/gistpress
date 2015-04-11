@@ -35,6 +35,13 @@ if ( ! class_exists( 'GistPress_Log' ) ) {
 }
 $gistpress_logger = new GistPress_Log;
 
+if ( is_admin() ) {
+	if ( ! class_exists( 'GistPress_Admin' ) ) {
+		require( plugin_dir_path( __FILE__ ) . 'includes/class-gistpress-admin.php' );
+	}
+	$gistpress_admin = new GistPress_Admin( $gistpress );
+}
+
 /**
  * Support localization for plugin.
  *
@@ -59,9 +66,15 @@ add_action( 'init', 'gistpress_i18n' );
  * @since 1.1.0
  */
 function gistpress_init() {
-	global $gistpress, $gistpress_logger;
+	global $gistpress, $gistpress_logger, $gistpress_admin;
 	$gistpress->set_logger( $gistpress_logger );
 	$gistpress->run();
+	if ($gistpress_admin) {
+		// don't bother with the logger class as debug bar is not active on
+		// admin pages
+		$gistpress_admin->set_logger( $gistpress_logger );
+		$gistpress_admin->run();
+	}
 }
 // Jetpack and some plugins load during "plugins_loaded" which occurs before
 // "init" (obviously), so we have to beat that.
